@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'main_page.dart';
 import 'signup_page.dart';
 
-
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -33,7 +37,6 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-
       home: const MyHomePage (title: 'Radar '),
     );
   }
@@ -41,24 +44,19 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
   // how it looks.
-
   // This class is the configuration for the state. It holds the values (in this
   // case the title) provided by the parent (in this case the App widget) and
   // used by the build method of the State. Fields in a Widget subclass are
   // always marked "final".
-
   final String title;
-
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 // REPLACE your old _MyHomePageState class with this entire block of code
-
 class _MyHomePageState extends State<MyHomePage> {
   final _nameController = TextEditingController(); // <-- ADD THIS
   @override
@@ -76,23 +74,19 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center, // This centers the column vertically
             children: <Widget>[
-
               // 1. YOUR LOGO
               // I'm using a placeholder FlutterLogo. You will replace this.
               Image.asset('assets/images/logo.png'),
               const SizedBox(height: 0.5), // Spacing
-
               // 2. "Related to Jerry" TEXT
               const Text(
                 'READY TO SAVE?',
                 style: TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 32), // Spacing
-
               // 3. "Enter Full Name" TEXT
               const Text('Enter Full Name'),
               const SizedBox(height: 8), // Spacing
-
               // 4. THE TEXT FIELD
               TextField(
                 controller: _nameController, // <-- ADD THIS
@@ -104,7 +98,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
               const SizedBox(height: 24), // Spacing
-
               // 5. THE LOG IN BUTTON
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -126,11 +119,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: const Text('LOG IN', style: TextStyle(fontSize: 16)),
               ),
               const SizedBox(height: 24), // Spacing
-
               // 6. "or sign in with" TEXT
               const Text('or sign in with'),
               const SizedBox(height: 16), // Spacing
-
               // 7. THE SOCIAL ICONS
               const Row(
                 mainAxisAlignment: MainAxisAlignment.center, // Center the icons horizontally
@@ -143,7 +134,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
               ),
               const SizedBox(height: 32), // Spacing
-
               // 8. THE SIGN UP TEXT
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -155,7 +145,6 @@ class _MyHomePageState extends State<MyHomePage> {
                         context,
                         MaterialPageRoute(builder: (context) => const SignUpPage()),
                       );
-
                     },
                     child: const Text('Sign up'),
                   ),
