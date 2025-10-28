@@ -1,54 +1,26 @@
-// New file: main_page.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'homepage.dart'; // Import your homepage
-import 'history_page.dart'; // Import your new history page
-import 'me_page.dart';
+import 'services/firestore_service.dart';
+import 'history_page.dart';
+import 'settings_page.dart';
+import 'loan_page.dart';
+import 'select_participants_page.dart';
 
 class MainPage extends StatefulWidget {
-  final String name;
-  const MainPage({super.key, required this.name});
+  const MainPage({Key? key}) : super(key: key);
 
   @override
   State<MainPage> createState() => _MainPageState();
 }
 
 class _MainPageState extends State<MainPage> {
-  int _selectedIndex = 0; // Tracks the currently selected tab
-  late final List<Widget> _pages; // A list to hold our pages
-  
-  // Firebase instances
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final _firestoreService = FirestoreService();
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    // Initialize the list of pages here, so we can pass the user's name
-    _pages = [
-      Homepage(name: widget.name),
-      HistoryPage(name: widget.name),
-    ];
-    
-    // Load user data from Firestore
-    _loadUserData();
-  }
-
-  // Load user data from Firestore
-  Future<void> _loadUserData() async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
-        if (userDoc.exists) {
-          // User data loaded successfully
-          print('User data loaded: ${userDoc.data()}');
-        }
-      }
-    } catch (e) {
-      print('Error loading user data: $e');
-    }
   }
 
   void _onItemTapped(int index) {
@@ -57,236 +29,343 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      // In main_page.dart
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('RADAR', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        // REPLACE THE ACTIONS SECTION WITH THIS:
+  Future<void> _showAddFundsDialog() async {
+    final amountController = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Funds (USD)'),
+        content: TextField(
+          controller: amountController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            hintText: 'Enter amount',
+          ),
+        ),
         actions: [
           TextButton(
-            onPressed: () {
-              // This is where we navigate to the new MePage
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => MePage(name: widget.name)),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
+              if (amount <= 0) return;
+
+              // Placeholder payment integration
+              final res = await _firestoreService.initiatePayment(
+                amount: amount,
+                paymentMethod: 'card_placeholder',
               );
+              if (res['success'] == true) {
+                await _firestoreService.updateBalance(amount);
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Funds added: \$amount USD')),
+                );
+              }
             },
-            child: Text(
-              'Welcome, ${widget.name}',
-              style: TextStyle(color: Colors.blue), // Set color to make it visible
-            ),
+            child: const Text('Add'),
           ),
         ],
-      ),
-      // The body of the screen is now just the selected page from our list
-      body: _pages.elementAt(_selectedIndex),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list_alt),
-            label: 'Records',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
       ),
     );
   }
-}
 
-// Firestore Service Class for Ajo Circles, Loans, and Transactions
-class FirestoreService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  Future<void> _createContribution() async {
+    final amountController = TextEditingController();
+    final descController = TextEditingController();
+    String cycleType = 'month';
 
-  // Create Ajo Circle
-  Future<String?> createAjoCircle({
-    required String name,
-    required double contributionAmount,
-    required String frequency,
-    required List<String> memberIds,
-  }) async {
-    try {
-      User? user = _auth.currentUser;
-      if (user == null) return null;
-
-      DocumentReference ajoRef = await _firestore.collection('ajo_circles').add({
-        'name': name,
-        'contributionAmount': contributionAmount,
-        'frequency': frequency,
-        'createdBy': user.uid,
-        'memberIds': memberIds,
-        'createdAt': FieldValue.serverTimestamp(),
-        'status': 'active',
-      });
-
-      return ajoRef.id;
-    } catch (e) {
-      print('Error creating Ajo circle: $e');
-      return null;
-    }
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create Contribution'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Amount (USD)'),
+              ),
+              TextField(
+                controller: descController,
+                decoration: const InputDecoration(labelText: 'Description'),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: cycleType,
+                items: const [
+                  DropdownMenuItem(value: 'month', child: Text('Monthly')),
+                  DropdownMenuItem(value: 'exact_money', child: Text('Exact Money')),
+                ],
+                onChanged: (v) => cycleType = v ?? 'month',
+                decoration: const InputDecoration(labelText: 'Cycle Type'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
+              if (amount <= 0 || descController.text.trim().isEmpty) return;
+              await _firestoreService.createContribution(
+                amount: amount,
+                description: descController.text.trim(),
+                cycleType: cycleType,
+              );
+              if (!mounted) return;
+              Navigator.pop(context);
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
   }
 
-  // Get User's Ajo Circles
-  Stream<QuerySnapshot> getUserAjoCircles() {
-    User? user = _auth.currentUser;
+  Widget _buildBalanceCard(String uid) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      builder: (context, snapshot) {
+        final balance = (snapshot.data?.get('balance') ?? 0.0).toDouble();
+        return Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          color: Theme.of(context).colorScheme.primary,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Wallet Balance', style: TextStyle(color: Colors.white70)),
+                    const SizedBox(height: 8),
+                    Text(
+                      '\$${balance.toStringAsFixed(2)}',
+                      style: const TextStyle(fontSize: 28, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _showAddFundsDialog,
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                      icon: const Icon(Icons.add, color: Colors.black),
+                      label: const Text('Add Funds', style: TextStyle(color: Colors.black)),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: () async {
+                        // Simple withdraw simulation
+                        if (balance <= 0) return;
+                        await _firestoreService.updateBalance(-balance.clamp(0, balance));
+                      },
+                      child: const Text('Withdraw'),
+                    )
+                  ],
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContributions() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestoreService.getAllContributions(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No active contributions'));
+        }
+        final docs = snapshot.data!.docs;
+        return ListView.separated(
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final data = docs[index].data() as Map<String, dynamic>;
+            final id = docs[index].id;
+            final amount = (data['amount'] ?? 0.0).toDouble();
+            return ListTile(
+              title: Text(data['description'] ?? 'Contribution'),
+              subtitle: Text('${data['cycleType']} • Participants: ${List.from(data['participants'] ?? []).length}'),
+              trailing: Text('\$${amount.toStringAsFixed(2)}'),
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SelectParticipantsPage(contributionId: id),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildTransactions() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestoreService.getTransactionHistory(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No transactions yet'));
+        }
+        final docs = snapshot.data!.docs;
+        return ListView.separated(
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final data = docs[index].data() as Map<String, dynamic>;
+            final isCredit = (data['type'] ?? '') == 'credit';
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundColor: isCredit ? Colors.green.shade100 : Colors.red.shade100,
+                child: Icon(isCredit ? Icons.arrow_downward : Icons.arrow_upward, color: isCredit ? Colors.green : Colors.red),
+              ),
+              title: Text(data['description'] ?? (isCredit ? 'Credit' : 'Debit')),
+              subtitle: Text((data['timestamp'] as Timestamp?)?.toDate().toString() ?? ''),
+              trailing: Text(
+                (isCredit ? '+' : '-') + '\$' + (data['amount'] ?? 0.0).toStringAsFixed(2),
+                style: TextStyle(color: isCredit ? Colors.green : Colors.red, fontWeight: FontWeight.bold),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildNotifications() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestoreService.getNotifications(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No notifications'));
+        }
+        final docs = snapshot.data!.docs;
+        return ListView.separated(
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final data = docs[index].data() as Map<String, dynamic>;
+            final isRead = data['isRead'] == true;
+            return ListTile(
+              leading: Icon(isRead ? Icons.notifications_none : Icons.notifications_active, color: isRead ? Colors.grey : Colors.blue),
+              title: Text(data['title'] ?? 'Notification'),
+              subtitle: Text(data['message'] ?? ''),
+              trailing: Text((data['timestamp'] as Timestamp?)?.toDate().toString() ?? ''),
+              onTap: () => _firestoreService.markNotificationAsRead(docs[index].id),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      return const Stream.empty();
+      return const Scaffold(body: Center(child: Text('Not logged in')));
     }
 
-    return _firestore
-        .collection('ajo_circles')
-        .where('memberIds', arrayContains: user.uid)
-        .snapshots();
-  }
+    final pages = <Widget>[
+      SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildBalanceCard(user.uid),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _createContribution,
+                    icon: const Icon(Icons.group_add),
+                    label: const Text('New Contribution'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoanPage())),
+                    icon: const Icon(Icons.account_balance),
+                    label: const Text('Loans'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text('Active Contributions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            SizedBox(height: 420, child: _buildContributions()),
+          ],
+        ),
+      ),
+      _buildTransactions(),
+      _buildNotifications(),
+      const SettingsPage(),
+    ];
 
-  // Add Member to Ajo Circle
-  Future<bool> addMemberToAjoCircle(String ajoCircleId, String memberId) async {
-    try {
-      await _firestore.collection('ajo_circles').doc(ajoCircleId).update({
-        'memberIds': FieldValue.arrayUnion([memberId]),
-      });
-      return true;
-    } catch (e) {
-      print('Error adding member to Ajo circle: $e');
-      return false;
-    }
-  }
-
-  // Create Loan
-  Future<String?> createLoan({
-    required String ajoCircleId,
-    required double amount,
-    required String borrowerId,
-    required double interestRate,
-    required DateTime dueDate,
-  }) async {
-    try {
-      User? user = _auth.currentUser;
-      if (user == null) return null;
-
-      DocumentReference loanRef = await _firestore.collection('loans').add({
-        'ajoCircleId': ajoCircleId,
-        'amount': amount,
-        'borrowerId': borrowerId,
-        'interestRate': interestRate,
-        'dueDate': Timestamp.fromDate(dueDate),
-        'createdAt': FieldValue.serverTimestamp(),
-        'status': 'pending',
-        'approvedBy': [],
-      });
-
-      return loanRef.id;
-    } catch (e) {
-      print('Error creating loan: $e');
-      return null;
-    }
-  }
-
-  // Get Loans for User
-  Stream<QuerySnapshot> getUserLoans() {
-    User? user = _auth.currentUser;
-    if (user == null) {
-      return const Stream.empty();
-    }
-
-    return _firestore
-        .collection('loans')
-        .where('borrowerId', isEqualTo: user.uid)
-        .snapshots();
-  }
-
-  // Get Loans for Ajo Circle
-  Stream<QuerySnapshot> getAjoCircleLoans(String ajoCircleId) {
-    return _firestore
-        .collection('loans')
-        .where('ajoCircleId', isEqualTo: ajoCircleId)
-        .snapshots();
-  }
-
-  // Create Transaction (Contribution/Payment)
-  Future<String?> createTransaction({
-    required String ajoCircleId,
-    required double amount,
-    required String type, // 'contribution', 'loan_payment', 'withdrawal'
-    String? loanId,
-  }) async {
-    try {
-      User? user = _auth.currentUser;
-      if (user == null) return null;
-
-      DocumentReference transactionRef = await _firestore.collection('transactions').add({
-        'ajoCircleId': ajoCircleId,
-        'userId': user.uid,
-        'amount': amount,
-        'type': type,
-        'loanId': loanId,
-        'createdAt': FieldValue.serverTimestamp(),
-        'status': 'completed',
-      });
-
-      return transactionRef.id;
-    } catch (e) {
-      print('Error creating transaction: $e');
-      return null;
-    }
-  }
-
-  // Get Transactions for User
-  Stream<QuerySnapshot> getUserTransactions() {
-    User? user = _auth.currentUser;
-    if (user == null) {
-      return const Stream.empty();
-    }
-
-    return _firestore
-        .collection('transactions')
-        .where('userId', isEqualTo: user.uid)
-        .orderBy('createdAt', descending: true)
-        .snapshots();
-  }
-
-  // Get Transactions for Ajo Circle
-  Stream<QuerySnapshot> getAjoCircleTransactions(String ajoCircleId) {
-    return _firestore
-        .collection('transactions')
-        .where('ajoCircleId', isEqualTo: ajoCircleId)
-        .orderBy('createdAt', descending: true)
-        .snapshots();
-  }
-
-  // Update User Profile
-  Future<bool> updateUserProfile(Map<String, dynamic> data) async {
-    try {
-      User? user = _auth.currentUser;
-      if (user == null) return false;
-
-      await _firestore.collection('users').doc(user.uid).update(data);
-      return true;
-    } catch (e) {
-      print('Error updating user profile: $e');
-      return false;
-    }
-  }
-
-  // Get User Profile
-  Future<DocumentSnapshot?> getUserProfile() async {
-    try {
-      User? user = _auth.currentUser;
-      if (user == null) return null;
-
-      return await _firestore.collection('users').doc(user.uid).get();
-    } catch (e) {
-      print('Error getting user profile: $e');
-      return null;
-    }
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('RadarApp'),
+        actions: [
+          IconButton(
+            tooltip: 'History',
+            icon: const Icon(Icons.history),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryPage())),
+          ),
+          IconButton(
+            tooltip: 'Logout',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (!mounted) return;
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+          ),
+        ],
+      ),
+      body: IndexedStack(index: _selectedIndex, children: pages),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Transactions'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifications'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+        ],
+      ),
+      floatingActionButton: _selectedIndex == 0
+          ? FloatingActionButton.extended(
+              onPressed: _createContribution,
+              icon: const Icon(Icons.add),
+              label: const Text('Contribution'),
+            )
+          : null,
+    );
   }
 }
