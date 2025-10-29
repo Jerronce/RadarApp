@@ -1,23 +1,6 @@
-// New file: history_page.dart
-
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'settings_page.dart';
-
-
-// First, let's create a data model for a single transaction
-class Transaction {
-  final String amount;
-  final String status;
-  final String month;
-  final bool isReceived;
-
-  Transaction({
-    required this.amount,
-    required this.status,
-    required this.month,
-    required this.isReceived,
-  });
-}
 
 class HistoryPage extends StatefulWidget {
   final String name;
@@ -28,22 +11,11 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  // In a real app, this data would come from a database.
-  // Here is some sample data based on your design.
-  final List<Transaction> _transactions = [
-    Transaction(amount: '\$100000', status: 'Received', month: 'Jan', isReceived: true),
-    Transaction(amount: '\$50000', status: 'Received', month: 'Mar', isReceived: true),
-    Transaction(amount: '\$10000', status: 'Paid', month: 'Jun', isReceived: false),
-    Transaction(amount: '\$100000', status: 'Paid', month: 'Jan', isReceived: false),
-    Transaction(amount: '\$10000', status: 'Paid', month: 'Dec', isReceived: false),
-    Transaction(amount: '\$10000', status: 'Paid', month: 'Oct', isReceived: false),
-    Transaction(amount: '\$10000', status: 'Paid', month: 'Oct', isReceived: false),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    // Note: We don't need a Scaffold here because the MainPage will provide it.
-    // This widget is just the content of the screen.
+    // Replace 'userId' with the real user's Firebase Auth UID in production!
+    final String userId = widget.name; // For demonstration, using name (replace with real UID!)
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -69,7 +41,6 @@ class _HistoryPageState extends State<HistoryPage> {
               IconButton(
                 icon: const Icon(Icons.settings, size: 36),
                 onPressed: () {
-                  // Navigate to the new SettingsPage
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const SettingsPage()),
@@ -79,37 +50,31 @@ class _HistoryPageState extends State<HistoryPage> {
             ],
           ),
           const SizedBox(height: 20),
-
           // -- The List of Transactions --
           Expanded(
-            child: ListView.builder(
-              itemCount: _transactions.length,
-              itemBuilder: (context, index) {
-                final transaction = _transactions[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
-                  // We use a Row to lay out the items horizontally
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        transaction.amount,
-                        style: TextStyle(
-                          color: transaction.isReceived ? Colors.green : Colors.red,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(transaction.status, style: const TextStyle(fontSize: 16)),
-                      Text(transaction.month, style: const TextStyle(fontSize: 16)),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('transactions')
+                  .where('userId', isEqualTo: userId) // Ensure you store userId in each transaction!
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text('No transactions found.'));
+                }
+
+                final data = snapshot.data!.docs;
+
+                return ListView.builder(
+                  itemCount: data.length,
+                  itemBuilder: (context, index) {
+                    final tx = data[index];
+                    final amount = tx['amount'].toString();
+                    final status = tx['status'] ?? '';
+                    final month = tx['month'] ?? '';
+                    final isReceived = (tx['isReceived'] ?? false) as bool;
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric

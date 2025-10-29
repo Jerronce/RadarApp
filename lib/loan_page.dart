@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'exact_money_page.dart';
 import 'other_amount_page.dart';
-
 
 class LoanPage extends StatefulWidget {
   final String name;
@@ -44,53 +44,38 @@ class _LoanPageState extends State<LoanPage> {
                 fillColor: Colors.grey[200],
               ),
             ),
+            const SizedBox(height: 24),
 
-            // This Expanded widget centers the buttons vertically
+            // -- Show live available loan records from Firestore, optionally by month or status --
             Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // -- "EXACT MONEY" Button --
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
-                    ),
-                    onPressed: () {
-                      // Logic for requesting a loan of a specific amount
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('loans')
+                    .where('status', isEqualTo: 'available') // Show only available loans
+                    .where('month', isEqualTo: widget.month) // Optional: by user's current month
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text('No loan amounts available for this month.'));
+                  }
 
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => ExactMoneyPage(name: widget.name)),
-                      );
-                    },
-                    child: const Text('EXACT MONEY'),
-                  ),
-                  const SizedBox(height: 20),
+                  final loans = snapshot.data!.docs;
 
-                  // -- "OTHER" Button --
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
-                    ),
-                    onPressed: () {
-                      // Logic for requesting a custom loan amount
-                      Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => OtherAmountPage(name: widget.name)),
-                       );
+                  return ListView.builder(
+                    itemCount: loans.length,
+                    itemBuilder: (context, index) {
+                      final loan = loans[index];
+                      final amount = loan['amount'].toString();
+                      final loanOwner = loan['ownerName'] ?? 'Unknown';
 
-
-                    },
-                    child: const Text('OTHER'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: ListTile(
+                          title: Text('\$$amount', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Owner: $loanOwner'),
+                          trailing: ElevatedButton(
+                            child: const Text('Request'),
+                            onPressed: ()

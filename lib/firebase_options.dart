@@ -47,28 +47,31 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDummy_Web_API_Key_Replace_With_Real',
-    appId: '1:000000000000:web:0000000000000000000000',
-    messagingSenderId: '000000000000',
-    projectId: 'your-project-id',
-    authDomain: 'your-project-id.firebaseapp.com',
-    storageBucket: 'your-project-id.appspot.com',
+    apiKey: "AIzaSyBFEZUMqCYqUrDTl3x6Xbs-L9-CEtqdjls",
+    authDomain: "radarapp-5176c.firebaseapp.com",
+    projectId: "radarapp-5176c",
+    storageBucket: "radarapp-5176c.firebasestorage.app",
+    messagingSenderId: "294284354409",
+    appId: "1:294284354409:web:effdd04330d142f882d3f8",
+    measurementId: "G-9KS4MH629Q"
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDummy_Android_API_Key_Replace_With_Real',
-    appId: '1:000000000000:android:0000000000000000000000',
-    messagingSenderId: '000000000000',
-    projectId: 'your-project-id',
-    storageBucket: 'your-project-id.appspot.com',
+    apiKey: "AIzaSyBFEZUMqCYqUrDTl3x6Xbs-L9-CEtqdjls",
+    authDomain: "radarapp-5176c.firebaseapp.com",
+    projectId: "radarapp-5176c",
+    storageBucket: "radarapp-5176c.firebasestorage.app",
+    messagingSenderId: "294284354409",
+    appId: "1:294284354409:web:effdd04330d142f882d3f8",
+    measurementId: "G-9KS4MH629Q"
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDummy_iOS_API_Key_Replace_With_Real',
-    appId: '1:000000000000:ios:0000000000000000000000',
-    messagingSenderId: '000000000000',
-    projectId: 'your-project-id',
-    storageBucket: 'your-project-id.appspot.com',
-    iosBundleId: 'com.example.radarapp',
-  );
+    apiKey: "AIzaSyBFEZUMqCYqUrDTl3x6Xbs-L9-CEtqdjls",
+    authDomain: "radarapp-5176c.firebaseapp.com",
+    projectId: "radarapp-5176c",
+    storageBucket: "radarapp-5176c.firebasestorage.app",
+    messagingSenderId: "294284354409",
+    appId: "1:294284354409:web:effdd04330d142f882d3f8",
+    measurementId: "G-9KS4MH629Q"
 }
