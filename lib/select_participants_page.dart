@@ -68,3 +68,5 @@ class _SelectParticipantsPageState extends State<SelectParticipantsPage> {
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection('users').snapshots(),
                 builder: (context, snapshot) {
+                                    return Container();
+                                                  }
