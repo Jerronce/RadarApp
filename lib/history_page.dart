@@ -77,4 +77,4 @@ class _HistoryPageState extends State<HistoryPage> {
                     final isReceived = (tx['isReceived'] ?? false) as bool;
 
                     return Padding(
-                      padding: const EdgeInsets.symmetric
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
