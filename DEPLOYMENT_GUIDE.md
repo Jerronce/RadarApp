@@ -1,232 +1,152 @@
-# Ajo/Esusu Web App - Firebase Hosting Deployment Guide
+# RadarApp - Firebase Deployment Guide
 
-## Overview
-This guide explains how to deploy the Ajo/Esusu web application to Firebase Hosting.
+## Project Information
+- **Project Name**: RadarApp (Ajo/Esusu Web & Mobile App)
+- **Firebase Project ID**: radarapp-5176c
+- **Platform**: Flutter (Web, Android, iOS)
+- **Hosting URL**: https://radarapp-5176c.web.app
 
-## Prerequisites
-1. Google Firebase Account (https://firebase.google.com)
-2. Firebase CLI installed (`npm install -g firebase-tools`)
-3. Node.js and npm installed
-4. GitHub access with your credentials
+## Setup Instructions
 
-## Deployment Steps
+### 1. Firebase Token Setup for GitHub Actions
 
-### Step 1: Firebase Project Setup
-1. Go to https://console.firebase.google.com
-2. Create a new project named "RadarApp"
-3. Enable Firestore Database with test mode
-4. Enable Authentication (Email/Password)
-5. Enable Firebase Storage
-6. Note your Project ID (radarapp-7e8c5)
-
-### Step 2: Local Setup & Authentication
+#### Option A: Generate CI Token (Recommended)
 ```bash
-# Install Firebase CLI globally
 npm install -g firebase-tools
-
-# Login to Firebase (opens browser for authentication)
-firebase login
-
-# Navigate to project directory
-cd /path/to/RadarApp
+firebase login:ci
 ```
 
-### Step 3: Initialize Firebase (if not done)
+This will open a browser window for authentication. Follow the prompts and copy the token that appears.
+
+#### Option B: Use Service Account Key (Alternative)
+
+If Option A doesn't work:
+1. Go to: https://console.firebase.google.com/project/radarapp-5176c/settings/serviceaccounts/adminsdk
+2. Click "Generate new private key"
+3. Convert the JSON to base64:
 ```bash
-# Initialize Firebase in the project
-firebase init
-
-# Select Hosting
-# Choose your Firebase project: RadarApp
-# Set public directory: web
-# Configure as single-page app: Yes
+cat serviceAccountKey.json | base64
 ```
 
-### Step 4: Deploy to Firebase Hosting
+### 2. Add GitHub Secrets
+
+1. Go to your GitHub repository
+2. Settings → Secrets and variables → Actions → New repository secret
+3. Add one of the following:
+
+**For Option A (CI Token):**
+- Name: `FIREBASE_TOKEN`
+- Value: [Paste the token from firebase login:ci]
+
+**For Option B (Service Account):**
+- Name: `FIREBASE_SERVICE_ACCOUNT`
+- Value: [Paste the base64-encoded service account key]
+
+### 3. Deploy to Firebase
+
+#### Option 1: Automatic Deployment via GitHub Actions
+Simply push to the `main` branch:
 ```bash
-# Deploy the web app
-firebase deploy --project=radarapp-7e8c5
-
-# The deployment URL will be shown in the output
-# Example: https://radarapp-7e8c5.web.app
+git push origin main
 ```
 
-### Step 5: Verify Deployment
-1. Open the Firebase Hosting URL in your browser
-2. Test the signup page
-3. Verify Firebase SDK is initialized
-4. Test Flutterwave payment integration
+The GitHub Actions workflow will automatically deploy to Firebase Hosting.
 
-## Important Configuration Files
+#### Option 2: Manual Deployment
+```bash
+npm install -g firebase-tools
+firebase deploy --project radarapp-5176c --token YOUR_FIREBASE_TOKEN
+```
+
+#### Option 3: Deploy Flutter Web Build
+```bash
+flutter pub get
+flutter build web --release
+firebase deploy --public build/web --project radarapp-5176c
+```
+
+## Project Structure
+
+- **web/**: Web deployment files (HTML, CSS, JS)
+  - index.html: Main HTML entry point
+  - app.js: Web initialization script
+  - styles.css: Web styles
+- **lib/**: Flutter Dart source code
+  - main.dart: App entry point
+  - main_page.dart: Main app page
+  - signup_page.dart: User signup
+  - And 10+ other feature pages
+- **.github/workflows/**: CI/CD automation
+  - firebase-deploy.yml: Automatic Firebase deployment
+
+## Features Included
+
+✅ Flutter-based cross-platform app (Web, Android, iOS)
+✅ Firebase integration (Authentication, Database, Hosting)
+✅ Multi-page navigation system
+✅ User signup and authentication pages
+✅ Ajo/Esusu contribution management features:
+   - Home page
+   - Main/Loan pages
+   - Participant selection
+   - Monthly tracking
+   - Settings and profile management
+   - History tracking
+✅ Responsive design
+✅ Firebase configuration files (.firebaserc, firebase.json)
+✅ GitHub Actions automation
+
+## Firebase Configuration Files
 
 ### firebase.json
-```json
-{
-  "hosting": {
-    "public": "web",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  }
-}
-```
+Configures Firebase Hosting to serve the web directory with proper routing.
 
-### config.js
-Update with your actual Firebase credentials:
-```javascript
-const config = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'radarapp-7e8c5.firebaseapp.com',
-  projectId: 'radarapp-7e8c5',
-  storageBucket: 'radarapp-7e8c5.appspot.com',
-  messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-  appId: 'YOUR_APP_ID'
-};
-```
-
-## Environment Variables
-
-Set the following environment variables before deployment:
-
-```bash
-export FIREBASE_PROJECT_ID=radarapp-7e8c5
-export FLUTTERWAVE_PUBLIC_KEY=FLWPUBK-16a72bd54f4eb876e6a705d899b049d8-X
-```
-
-## Features Deployed
-✅ User Authentication (Firebase)
-✅ Firestore Database Integration
-✅ Flutterwave Payment Processing
-✅ Wallet System
-✅ Monthly Contributions
-✅ Loan Feature
-✅ Transaction Records
-✅ Dark Mode Toggle
-✅ Settings Page
-✅ Responsive Design
-
-## API Keys & Credentials
-
-The following keys are configured:
-- **Flutterwave Public Key**: FLWPUBK-16a72bd54f4eb876e6a705d899b049d8-X
-- **Monthly Charge**: NGN 30
-- **Wallet Deposit Charge**: NGN 10
-- **Maximum Loan Limit**: NGN 1,000,000
+### .firebaserc
+Stores the Firebase project ID for easy deployment reference.
 
 ## Troubleshooting
 
-### Firebase Authentication Error
+### Issue: "firebase: command not found"
+**Solution**: Install Firebase CLI
 ```bash
-# Clear Firebase cache and re-authenticate
-firebase logout
-firebase login --no-localhost
+npm install -g firebase-tools
 ```
 
-### Deployment Issues
+### Issue: GitHub Actions fails with "FIREBASE_TOKEN not found"
+**Solution**: Add the token to GitHub repository secrets (see section 2)
+
+### Issue: Web app shows blank page
+**Solution**: Check that index.html and app.js are in the `web/` directory
+
+## Testing
+
+### Local Web Testing
 ```bash
-# Check Firebase status
-firebase status
-
-# View deployment logs
-firebase functions:log
+cd web
+python3 -m http.server 8000
+# Visit http://localhost:8000
 ```
 
-### CORS Issues
-Add CORS headers in firebase.json:
-```json
-"headers": [
-  {
-    "key": "Cache-Control",
-    "value": "max-age=3600"
-  }
-]
-```
-
-## Testing the App
-
-### Login Flow
-1. Visit the deployed URL
-2. Sign up with email and password
-3. Verify email in Firebase Console
-4. Login with credentials
-
-### Payment Flow
-1. Click "Contribute"
-2. Select month and participants
-3. Complete Flutterwave payment
-4. Verify transaction in Firestore
-
-### Wallet Feature
-1. Navigate to Wallet
-2. Enter deposit amount
-3. Process payment
-4. Check wallet balance update
-
-## Performance Optimization
-
-- Minify CSS and JavaScript
-- Enable Firebase hosting cache
-- Use CDN for assets
-- Optimize images
-
-## Security Considerations
-
-1. Set Firestore security rules:
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
-    }
-    match /transactions/{document=**} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-    }
-  }
-}
-```
-
-2. Enable Authentication Security:
-- Enforce strong passwords
-- Enable email verification
-- Set session timeout
-
-## Maintenance
-
-### Regular Updates
+### Flutter Web Testing
 ```bash
-# Update Firebase CLI
-npm install -g firebase-tools@latest
-
-# Update dependencies
-npm update
+flutter run -d web
 ```
 
-### Monitoring
-- Monitor Firebase Realtime Database usage
-- Check authentication logs
-- Review transaction history
-- Analyze user engagement
+## Deployment Status
 
-## Support & Documentation
+✅ Web files fixed and optimized
+✅ Firebase configuration completed
+✅ GitHub Actions workflow created
+✅ CI/CD pipeline ready
+⏳ Awaiting Firebase token setup in GitHub Secrets
 
-- Firebase Documentation: https://firebase.google.com/docs
-- Flutterwave API: https://developer.flutterwave.com
-- GitHub Repository: https://github.com/Jerronce/RadarApp
+## Next Steps
 
-## Version Info
+1. **Generate and add FIREBASE_TOKEN** to GitHub repository secrets
+2. **Push to GitHub** to trigger automatic deployment
+3. **Verify at** https://radarapp-5176c.web.app
 
-- App Version: 1.0.0
-- Firebase SDK: Latest
-- Flutterwave SDK: Latest
-- Deployment Date: December 19, 2025
+## Support
 
+For Firebase documentation: https://firebase.google.com/docs
+For Flutter documentation: https://flutter.dev/docs
